@@ -45,9 +45,10 @@ TARGET = car_control
 
 
 # List C source files here. (C dependencies are automatically generated.)
-SRC =	$main.c \
+SRC =	main.c \
 	usb_serial.c \
-
+	afproto.c \
+	crc8.c
 
 # MCU name, you MUST set this to match the board you are using
 # type "make clean" after changing this, so all files will be rebuilt
