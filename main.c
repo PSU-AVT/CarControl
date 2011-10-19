@@ -27,6 +27,19 @@ void pwm_init(void) {
 
 void handle_cmd(unsigned char *cmd, uint8_t len) {
 	switch(cmd[0]) {
+		case 0:
+			OCR1A = 2200;
+		        OCR1B = 2200;
+		case 1:
+			if(cmd[1] >= 128)
+				OCR1A = 3000 + ((cmd[1] - 128)*4);
+			else
+				OCR1A = 3000 - ((128 - cmd[1])*4);
+		case 2:
+			if(cmd[1] >= 128)
+				OCR1B = 3000 + ((cmd[1] - 128)*5);
+			else
+				OCR1B = 3000 - ((128 - cmd[1])*5);
 	}
 }
 
@@ -59,8 +72,6 @@ int main() {
 
 		// Reset state 
 		buff_ndx = 0;
-		DRIVE_PWM(0);
-		STEER_PWM(0);
 
 		while(1) {
 			getchar_ret = usb_serial_getchar();
@@ -76,6 +87,7 @@ int main() {
 
 			if(buff_ndx >= 2 && serial_buff[buff_ndx-1] == AFPROTO_FRAME_END_BYTE &&  serial_buff[buff_ndx-2] != AFPROTO_FRAME_ESCAPE_BYTE) {
 				got_cmd(serial_buff, buff_ndx);
+				buff_ndx = 0;
 			}
 		}
 	}
