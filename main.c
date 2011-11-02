@@ -6,8 +6,14 @@
 #include "afproto.h"
 
 #define CPU_PRESCALE(n) (CLKPR = 0x80, CLKPR = (n))
-#define DRIVE_PWM(n)
-#define STEER_PWM(n)
+
+uint16_t throttle_neutral = 3000;
+uint16_t steer_neutral = 2975;
+
+void set_neutral(void) {
+	OCR1A = throttle_neutral;
+	OCR1B = steer_neutral;
+}
 
 void pwm_init(void) {
 	// To get 50hz pwm we do fast PWM with TOP = 39999, N = 8
@@ -19,8 +25,7 @@ void pwm_init(void) {
 	ICR1 = 39999;
 
 	// Valid duty cycles are between 2200 and 3800
-	OCR1A = 2200;
-	OCR1B = 2200;
+	set_neutral();
 
 	DDRB = (1 << PB5) | (1 << PB6);
 }
@@ -28,18 +33,20 @@ void pwm_init(void) {
 void handle_cmd(unsigned char *cmd, uint8_t len) {
 	switch(cmd[0]) {
 		case 0:
-			OCR1A = 2200;
-		        OCR1B = 2200;
+			set_neutral();
+			break;
 		case 1:
 			if(cmd[1] >= 128)
 				OCR1A = 3000 + ((cmd[1] - 128)*4);
 			else
 				OCR1A = 3000 - ((128 - cmd[1])*4);
+			break;
 		case 2:
 			if(cmd[1] >= 128)
-				OCR1B = 3000 + ((cmd[1] - 128)*5);
+				OCR1B = 3000 - ((cmd[1] - 128)*5);
 			else
-				OCR1B = 3000 - ((128 - cmd[1])*5);
+				OCR1B = 3000 + ((128 - cmd[1])*5);
+			break;
 	}
 }
 
@@ -50,6 +57,7 @@ void got_cmd(unsigned char *serial_buff, uint8_t len) {
 
 int main() {
 	unsigned char serial_buff[512];
+	unsigned char buff[256];
 	uint8_t buff_ndx = 0;
 	int16_t getchar_ret;
 
@@ -59,11 +67,16 @@ int main() {
 	// Start PWM
 	pwm_init();
 
+	// Arm esc
+	_delay_ms(1000);
+
 	// Init usb serial and wait for connection
 	usb_init();
 	while(!usb_configured());
 	_delay_ms(1000);
 
+	strcpy(buff, "hello");
+	uint8_t length;
 
 	// Reset loop (if control program disconnects)
 	while(1) {
