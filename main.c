@@ -1,4 +1,5 @@
 #include <avr/io.h>
+#include <avr/wdt.h>
 #include <util/delay.h>
 #include <stdint.h>
 
@@ -37,20 +38,21 @@ void handle_cmd(unsigned char *cmd, uint8_t len) {
 			break;
 		case 1:
 			if(cmd[1] >= 128)
-				OCR1A = 3000 + ((cmd[1] - 128)*4);
+				OCR1A = throttle_neutral + ((cmd[1] - 128)*4);
 			else
-				OCR1A = 3000 - ((128 - cmd[1])*4);
+				OCR1A = throttle_neutral - ((128 - cmd[1])*4);
 			break;
 		case 2:
 			if(cmd[1] >= 128)
-				OCR1B = 3000 - ((cmd[1] - 128)*5);
+				OCR1B = steer_neutral - ((cmd[1] - 128)*5);
 			else
-				OCR1B = 3000 + ((128 - cmd[1])*5);
+				OCR1B = steer_neutral + ((128 - cmd[1])*5);
 			break;
 	}
 }
 
 void got_cmd(unsigned char *serial_buff, uint8_t len) {
+        wdt_reset();
 	afproto_get_payload(serial_buff, len, serial_buff, &len);
 	handle_cmd(serial_buff, len);
 }
@@ -63,6 +65,9 @@ int main() {
 
 	// Set CPU to 16Mhz
 	CPU_PRESCALE(0);
+
+	//Turn on the Watchdog
+	wdt_enable(WDTO_250MS);
 
 	// Start PWM
 	pwm_init();
@@ -106,4 +111,9 @@ int main() {
 	}
 	
 	return 0;
+}
+
+ISR(WDT_vect)
+{
+  set_neutral();
 }
